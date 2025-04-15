@@ -1,3 +1,133 @@
+# Анализ Системы (15.04.2025, 14:16)
+
+## Логика Модулей Системы
+
+1.  **`utils.js` (Утилиты):**
+    *   Предоставляет вспомогательные функции: генерация ID, форматирование времени, извлечение имени/директории файла, создание пути для бэкапа.
+2.  **`dbManager.js` (Менеджер Базы Данных):**
+    *   Управляет соединением с IndexedDB (`smartAssistantDB_Modular`).
+    *   Создает хранилище `files` и добавляет начальные файлы при инициализации.
+3.  **`fileSystemAPI.js` (API Виртуальной Файловой Системы):**
+    *   Абстракция над `dbManager.js` для CRUD-операций с файлами в IndexedDB.
+    *   Реализует автоматическое резервное копирование при сохранении/удалении.
+4.  **`ui.js` (Пользовательский Интерфейс - Частично Устарел):**
+    *   Функции для прямого манипулирования DOM (рендеринг списка файлов, редактора, чата, уведомлений, кнопок).
+    *   *Примечание:* Постепенно заменяется Vue.js в `main.js`.
+5.  **`chat.js` (Логика Чата):**
+    *   Управляет состоянием текущего чата и конфигурацией агента.
+    *   Загружает/сохраняет историю чата (`loadChat`, `saveCurrentChat`).
+    *   Отправляет сообщения (`sendMessage`): проверяет/сохраняет API-ключ, формирует запрос к VseGPT API, обрабатывает ответ, обновляет UI и сохраняет историю.
+6.  **`main.js` (Основной Модуль и Инициализация Vue):**
+    *   Инициализирует Vue.js.
+    *   Определяет реактивное состояние UI.
+    *   Содержит методы Vue для обработки действий пользователя (навигация, загрузка/сохранение/удаление/создание файлов, отправка сообщений).
+    *   Координирует работу всех модулей.
+    *   При инициализации (`onMounted`) открывает БД, загружает JS-файлы в виртуальную ФС, отображает корневую директорию.
+
+## Логика Создания и Открытия Диалогов (Чатов)
+
+*   **Открытие существующего чата:**
+    1.  Клик на `.json` файл в `/chats/`.
+    2.  `main.js` -> `loadFile` -> `FileSystemAPI.getFile`.
+    3.  `main.js` парсит JSON, помещает `messages` в `chatHistory.value` (Vue).
+    4.  Vue обновляет UI чата. Содержимое файла также идет в редактор.
+*   **Создание нового чата (Явное):**
+    1.  В директории `/chats/` нажать "Создать файл".
+    2.  `main.js` -> `createFile`.
+    3.  Запрос имени файла (`.json`).
+    4.  `main.js` -> `FileSystemAPI.saveFile` с начальным содержимым (`{"id": "...", "messages": []}`).
+    5.  `main.js` обновляет список файлов и загружает новый пустой чат (`loadFile`).
+*   **Создание нового чата (Неявное, при отправке сообщения):**
+    1.  Ввод текста в редактор, чат не выбран.
+    2.  Нажатие "Отправить".
+    3.  `main.js` -> `sendMessage`.
+    4.  `sendMessage` определяет, что чат не выбран.
+    5.  Генерирует имя файла (`chat_timestamp.json`) в `/chats/`.
+    6.  `main.js` -> `FileSystemAPI.saveFile` с начальным содержимым.
+    7.  `main.js` загружает новый чат (`loadFile`). `selectedFilePath` обновляется.
+    8.  `sendMessage` продолжает: получает API-ключ, проверяет конфиг, вызывает `Chat.sendMessage` с путем к *новому* файлу.
+
+## Схема Взаимодействия Компонентов
+
+```mermaid
+graph TD
+    subgraph "Пользовательский Интерфейс (Браузер)"
+        VueApp[Vue App (main.js)]
+        Editor[Редактор (textarea)]
+        FileList[Список Файлов]
+        ChatView[Окно Чата]
+        Buttons[Кнопки (Save, Delete, Send...)]
+        Notifications[Уведомления]
+        UI_JS[ui.js (Legacy DOM Utils)]
+    end
+
+    subgraph "Логика Приложения (JavaScript)"
+        MainJS[main.js / Vue setup()]
+        ChatJS[chat.js]
+        FS_API[fileSystemAPI.js]
+        DBManager[dbManager.js]
+        UtilsJS[utils.js]
+    end
+
+    subgraph "Хранилище (Браузер)"
+        IndexedDB[IndexedDB (smartAssistantDB_Modular)]
+    end
+
+    subgraph "Внешние Сервисы"
+        VseGPT_API[VseGPT API]
+    end
+
+    %% Связи UI и Vue App
+    VueApp -- Управляет --> Editor
+    VueApp -- Управляет --> FileList
+    VueApp -- Управляет --> ChatView
+    VueApp -- Управляет --> Buttons
+    VueApp -- Управляет --> Notifications
+    VueApp -- Использует (реже) --> UI_JS
+
+    %% Связи Vue App (main.js) с логикой
+    MainJS -- Инициализирует --> VueApp
+    MainJS -- Вызывает методы --> FS_API
+    MainJS -- Вызывает методы --> ChatJS
+    MainJS -- Использует --> UtilsJS
+    MainJS -- Может вызывать --> UI_JS
+
+    %% Связи Chat.js
+    ChatJS -- Вызывает --> FS_API  (для сохранения/загрузки чатов, секретов)
+    ChatJS -- Вызывает --> fetch (для VseGPT_API)
+    ChatJS -- Вызывает --> UI_JS (для рендера сообщений, уведомлений - может быть заменено Vue)
+    ChatJS -- Использует --> UtilsJS
+
+    %% Связи FileSystemAPI
+    FS_API -- Вызывает методы --> DBManager
+    FS_API -- Использует --> UtilsJS
+    FS_API -- Вызывает --> UI_JS (showNotification для ошибок бэкапа - может быть заменено Vue)
+
+    %% Связи DBManager
+    DBManager -- Взаимодействует --> IndexedDB
+    DBManager -- Использует --> UtilsJS
+
+    %% Взаимодействие с внешним API
+    ChatJS -- HTTP Request --> VseGPT_API
+
+    %% Пользовательские взаимодействия (примеры)
+    User(Пользователь) -- Клик --> FileList
+    User -- Ввод текста --> Editor
+    User -- Клик --> Buttons
+
+    FileList -- Событие click --> MainJS
+    Editor -- Событие input --> MainJS
+    Buttons -- Событие click --> MainJS
+
+    %% Поток данных (примеры)
+    FS_API -- Данные файлов --> MainJS
+    MainJS -- Данные для UI --> VueApp
+    ChatJS -- Сообщения --> MainJS
+    VseGPT_API -- Ответ --> ChatJS
+```
+
+---
+
 Проверка
 
 
