@@ -1,0 +1,392 @@
+/* --- СОДЕРЖИМОЕ styles.css --- */
+/* Общие стили */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f7f6;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.app-container {
+    width: 95%;
+    max-width: 1400px;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 90vh; /* Ограничиваем высоту */
+}
+
+/* Шапка */
+.app-header {
+    background-color: #4a90e2;
+    color: white;
+    padding: 15px 25px;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+ }
+
+ .app-header h1 {
+     margin: 0;
+     font-size: 1.1em; /* Уменьшен размер */
+     font-weight: normal; /* Сделаем не жирным */
+ }
+
+ .notifications {
+    min-height: 20px;
+    font-size: 0.9em;
+}
+
+.notification {
+    padding: 5px 10px;
+    border-radius: 4px;
+    margin-left: 10px;
+    color: white;
+    display: inline-block; /* Чтобы уведомления были в строке, если их несколько */
+}
+.notification.success { background-color: #4CAF50; }
+.notification.error { background-color: #f44336; }
+.notification.warning { background-color: #ff9800; color: #333; }
+
+/* Основной контент */
+.app-main {
+    display: flex;
+    flex-grow: 1;
+    overflow: hidden; /* Предотвращаем выход контента */
+}
+
+/* Боковая панель (Файловый менеджер) */
+.sidebar {
+    width: 250px;
+    background-color: #e9ecef;
+    padding: 15px;
+    border-right: 1px solid #d1dbe5;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto; /* Добавляем скроллбар */
+ }
+
+ .sidebar h2 {
+     margin-top: 0;
+     font-size: 1em; /* Уменьшен размер */
+     font-weight: bold; /* Оставим жирным для отделения */
+     color: #4a5568;
+     border-bottom: 1px solid #ccc;
+    padding-bottom: 10px;
+}
+
+.directory-controls {
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+#current-path {
+    font-weight: bold;
+    word-break: break-all; /* Перенос длинных путей */
+}
+
+#file-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    flex-grow: 1;
+}
+
+#file-list li {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 4px;
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.2s ease;
+    white-space: nowrap; /* Предотвращаем перенос имени файла */
+    overflow: hidden;
+    text-overflow: ellipsis; /* Добавляем троеточие, если не помещается */
+    /* Remove justify-content to allow items to align left */
+}
+
+/* Styles for hierarchy */
+#file-list ul {
+    list-style: none;
+    padding-left: 0; /* Remove default padding */
+    margin: 0;
+}
+
+#file-list li .toggle {
+    display: inline-block;
+    width: 15px; /* Fixed width for alignment */
+    cursor: pointer;
+    margin-right: 3px;
+    font-size: 0.8em;
+    text-align: center;
+    flex-shrink: 0;
+}
+#file-list li .item-icon {
+    margin-right: 5px;
+    flex-shrink: 0;
+}
+
+#file-list li:hover {
+    background-color: #d1dbe5;
+}
+
+#file-list li.loading,
+#file-list li.loading-subdir,
+#file-list li.empty {
+    font-style: italic;
+    color: #666;
+    cursor: default;
+}
+#file-list li.error { color: #f44336; cursor: default; }
+
+/* Remove old ::before icons */
+/* #file-list li.directory::before { content: none; } */
+/* #file-list li.file::before { content: none; } */
+
+
+/* Область контента */
+.content-area {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column; /* Располагаем элементы вертикально */
+    padding: 20px;
+    background-color: #fdfdfd;
+    overflow-y: auto; /* Скролл для всей области */
+}
+
+/* Просмотрщик/редактор файлов */
+.file-viewer {
+    flex-grow: 1; /* Занимает доступное пространство */
+    display: flex;
+    flex-direction: column;
+    /* margin-bottom: 20px; /* Отступ убран, т.к. чат теперь сверху */
+    min-height: 250px; /* Минимальная высота редактора */
+ }
+
+ .file-viewer h2 {
+     margin-top: 0;
+     font-size: 1em; /* Уменьшен размер */
+     font-weight: bold; /* Оставим жирным */
+     color: #4a5568;
+ }
+
+ #file-info {
+    margin-bottom: 10px;
+    color: #555;
+    background: #eee;
+    padding: 5px 8px;
+    border-radius: 3px;
+    min-height: 20px;
+    font-size: 0.9em;
+}
+
+#file-content-editor {
+    width: 100%;
+    flex-grow: 1; /* Позволяет textarea растягиваться */
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 10px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.95em;
+    box-sizing: border-box; /* Учитываем padding и border в размерах */
+    min-height: 150px; /* Начальная высота */
+    resize: vertical; /* Разрешить изменение размера только по вертикали */
+}
+
+/* Удаляем старые file-actions */
+/* .file-actions { ... } */
+
+/* Новая объединенная панель */
+.combined-input-actions {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #f8f9fa;
+}
+
+.combined-input-actions input[type="text"] {
+    flex-grow: 1;
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.95em;
+}
+
+.combined-input-actions button {
+    flex-shrink: 0; /* Предотвращаем сжатие кнопок */
+}
+
+
+#file-status {
+    font-size: 0.9em;
+    color: #666;
+    margin-left: auto; /* Прижимаем статус к правому краю */
+}
+
+.config-display {
+    margin-top: 15px;
+    border-top: 1px solid #eee;
+    padding-top: 10px;
+}
+.config-display h3 { margin-top: 0; font-size: 1em; }
+.config-display pre {
+    background-color: #f0f0f0;
+    padding: 10px;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 150px; /* Ограничиваем высоту блока с конфигом */
+    overflow-y: auto;
+    font-size: 0.9em;
+}
+
+/* Интерфейс чата */
+.chat-interface {
+    /* border-top: 1px solid #e0e0e0; /* Убираем верхнюю границу */
+    /* padding-top: 20px; /* Убираем верхний отступ */
+    display: flex;
+    flex-direction: column;
+    min-height: 200px; /* Мин. высота чата */
+    flex-shrink: 0; /* Не сжиматься */
+    margin-bottom: 20px; /* Добавляем отступ снизу, перед редактором */
+ }
+
+ .chat-interface h2 {
+     margin-top: 0;
+     font-size: 1em; /* Уменьшен размер */
+     font-weight: bold; /* Оставим жирным */
+     color: #4a5568;
+ }
+
+ #chat-history {
+    flex-grow: 1;
+    overflow-y: auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 10px;
+    min-height: 100px;
+    background-color: #f9f9f9;
+}
+
+.chat-message {
+    margin-bottom: 8px;
+    padding: 6px 12px;
+    border-radius: 15px;
+    max-width: 85%;
+    word-wrap: break-word;
+    line-height: 1.4;
+}
+
+.chat-message.user {
+    background-color: #dcf8c6;
+    margin-left: auto;
+    border-bottom-right-radius: 5px;
+}
+
+.chat-message.agent {
+    background-color: #e1f5fe;
+    margin-right: auto;
+    border-bottom-left-radius: 5px;
+}
+ .chat-message.error {
+    background-color: #ffebee;
+    color: #c62828;
+     margin-right: auto;
+    border-bottom-left-radius: 5px;
+    font-style: italic;
+ }
+
+.chat-message .sender {
+    font-weight: bold;
+    font-size: 0.8em;
+    margin-bottom: 3px;
+    color: #555;
+}
+.chat-message .timestamp {
+    font-size: 0.7em;
+    color: #999;
+    margin-top: 4px;
+    text-align: right;
+    display: block; /* Чтобы был на своей строке */
+}
+
+/* Удаляем старые стили для ввода чата и API ключа */
+/* .chat-input-area { ... } */
+/* .api-key-area { ... } */
+/* .chat-input { ... } */
+/* #chat-message-input { ... } */ /* Стили перенесены в .combined-input-actions input */
+
+
+/* Подвал */
+.app-footer {
+    background-color: #f8f9fa;
+    color: #6c757d;
+    padding: 10px 25px;
+    text-align: center;
+    font-size: 0.9em;
+    border-top: 1px solid #e0e0e0;
+    flex-shrink: 0; /* Не сжиматься */
+}
+
+/* Кнопки */
+button {
+    padding: 8px 15px;
+    border: none;
+    border-radius: 5px;
+    background-color: #4a90e2;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    font-size: 0.9em;
+}
+
+button:hover:not(:disabled) {
+    background-color: #357abd;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+button:active:not(:disabled) {
+    background-color: #2a6ca4;
+}
+
+button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+#btn-root, #btn-create-file {
+    padding: 5px 10px;
+}
+#btn-create-file {
+    background-color: #5cb85c;
+}
+#btn-create-file:hover:not(:disabled) {
+    background-color: #4cae4c;
+}
+#btn-delete-file {
+    background-color: #d9534f;
+}
+#btn-delete-file:hover:not(:disabled) {
+    background-color: #c9302c;
+}
+#btn-send-message {
+    flex-shrink: 0; /* Не сжимать кнопку отправки */
+}

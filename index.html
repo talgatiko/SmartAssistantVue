@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Assistant (Modular)</title>
+    <!-- Link external CSS file -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="app"> <!-- Root element for Vue -->
+        <div class="app-container">
+            <header class="app-header">
+                <h1>Smart Assistant (Modular)</h1>
+                <!-- Область уведомлений, управляемая Vue -->
+                <div id="notifications" class="notifications">
+                    <div v-for="(notification, index) in notifications" :key="index" :class="['notification', notification.type || 'info']">
+                        <span>{{ notification.message }}</span>
+                        <!-- Добавим кнопку для закрытия уведомления (пока без логики закрытия) -->
+                        <button @click="notifications.splice(index, 1)" class="close-notification">&times;</button>
+                    </div>
+                </div>
+            </header>
+
+        <main class="app-main">
+            <aside class="sidebar file-explorer">
+                <h2>Файловый менеджер</h2>
+                <div class="directory-controls">
+                    <!-- Используем @click для вызова методов Vue -->
+                    <button @click="renderFileList('/')" title="Перейти в корень">/ Корневая</button>
+                    <button @click="createFile" title="Создать файл в текущей папке">+</button>
+                 </div>
+                 <!-- Отображаем текущую директорию из состояния Vue -->
+                 <div style="word-break: break-all; font-weight: bold; margin: 5px 0; font-size: 0.9em;">{{ currentDirectory }}</div>
+                <!-- Динамический список файлов с использованием v-if/v-else/v-for -->
+                <ul id="file-list">
+                    <li v-if="isLoading" class="loading">{{ loadingMessage || 'Загрузка...' }}</li>
+                    <li v-else-if="files.length === 0" class="empty">Папка пуста</li>
+                    <!-- Итерация по массиву files из состояния Vue -->
+                    <li v-else v-for="file in files"
+                        :key="file.path"
+                        :class="['item', file.type, { selected: file.path === selectedFilePath }]"
+                        :title="file.path"
+                        @click="file.type === 'directory' ? renderFileList(file.path) : loadFile(file.path)">
+                        <span class="item-icon">{{ file.type === 'directory' ? '📁' : '📄' }}</span>
+                        <span>{{ file.name }}</span>
+                    </li>
+                </ul>
+            </aside>
+
+            <section class="content-area">
+                <div id="chat-interface" class="chat-interface">
+                    <h2>Чат с Агентом (VseGPT API)</h2>
+                    <!-- Динамическое отображение истории чата -->
+                    <div id="chat-history">
+                        <!-- Используем v-if/v-else для отображения сообщений или заглушки -->
+                        <template v-if="chatHistory.length > 0">
+                            <div v-for="(message, index) in chatHistory" :key="index" :class="['chat-message', message.sender === 'user' ? 'user' : 'agent']">
+                                <div class="sender">{{ message.sender === 'user' ? 'Вы' : 'Агент' }}</div>
+                                <!-- Используем v-html если нужно рендерить markdown, иначе {{ message.text }} -->
+                                <div class="message-content">{{ message.text }}</div>
+                                <div class="timestamp">{{ message.timestamp ? Utils.formatTimestamp(message.timestamp) : '' }}</div>
+                            </div>
+                        </template>
+                        <div v-else class="chat-message agent">
+                             <div class="sender">Агент</div>
+                             <div>История чата пуста. Выберите существующий чат или отправьте сообщение для создания нового.</div>
+                        </div>
+                    </div>
+                     <!-- Область ввода перенесена в file-viewer -->
+                </div>
+
+                <div id="file-viewer" class="file-viewer">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                       <h2 style="margin: 0;">Просмотр / Редактирование</h2>
+                       <!-- Отображаем статус файла из состояния Vue -->
+                       <span>{{ fileStatus }}</span>
+                   </div>
+                    <!-- Отображаем информацию о выбранном файле или сообщение по умолчанию -->
+                    <div id="file-info">
+                        <span v-if="selectedFilePath">Файл: {{ selectedFilePath }}</span>
+                        <span v-else>Выберите файл для просмотра или введите сообщение</span>
+                    </div>
+                    <!-- Связываем textarea с состоянием Vue через v-model и обрабатываем ввод -->
+                    <textarea
+                        id="file-content-editor"
+                        placeholder="Содержимое файла или введите сообщение для чата..."
+                        v-model="editorContent"
+                        @input="handleEditorInput"
+                        :disabled="isLoading"
+                    ></textarea>
+                    <!-- Объединенная область ввода и действий с привязкой к методам и состоянию Vue -->
+                    <div class="combined-input-actions">
+                         <!-- Кнопка Отправить: активна, если есть текст в редакторе -->
+                         <button @click="sendMessage" :disabled="!editorContent.trim() || isLoading">Отправить</button>
+                         <!-- Кнопка Сохранить: активна, если выбран файл, есть изменения и это не чат -->
+                         <button @click="saveFile" :disabled="!selectedFilePath || !isEditorDirty || isLoading || (selectedFilePath && selectedFilePath.startsWith('/chats/'))">Сохранить</button>
+                         <!-- Кнопка Удалить: активна, если выбран файл -->
+                         <button @click="deleteFile" :disabled="!selectedFilePath || isLoading">Удалить</button>
+                    </div>
+                     <!-- Отображение конфигурации агента, если она загружена -->
+                     <div v-if="lastLoadedAgentConfig" class="config-display">
+                        <h3>Конфигурация Активного Агента: {{ lastLoadedAgentConfig.name || 'Без имени' }}</h3>
+                        <pre>{{ JSON.stringify(lastLoadedAgentConfig, null, 2) }}</pre>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer removed -->
+    </div>
+
+    <!-- Import Vue.js via CDN -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <!-- Import the main JavaScript module -->
+    <script type="module" src="js/main.js"></script>
+    </div> <!-- Close #app -->
+</body>
+</html>
